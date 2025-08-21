@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear ENTROPY Storage</title>
+    <style>
+        body { font-family: monospace; padding: 2rem; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 2rem; border-radius: 8px; }
+        button { background: #ff4444; color: white; border: none; padding: 1rem 2rem; border-radius: 4px; cursor: pointer; margin: 0.5rem; }
+        button:hover { background: #cc0000; }
+        .info { background: #e3f2fd; padding: 1rem; border-radius: 4px; margin: 1rem 0; }
+        .success { background: #e8f5e8; padding: 1rem; border-radius: 4px; margin: 1rem 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ ENTROPY Storage Cleaner</h1>
+        
+        <div class="info">
+            <strong>Current Storage:</strong>
+            <div id="storage-info"></div>
+        </div>
+        
+        <button onclick="clearAllStorage()">🗑️ Clear All Frontend Storage</button>
+        <button onclick="clearOnlyEntropy()">🎯 Clear Only ENTROPY Data</button>
+        
+        <div id="result"></div>
+        
+        <h3>📋 What this clears:</h3>
+        <ul>
+            <li>✅ localStorage (theme preferences, cached data)</li>
+            <li>✅ sessionStorage (temporary session data)</li>
+            <li>✅ IndexedDB (if used for offline storage)</li>
+            <li>✅ Service Worker cache (if any)</li>
+        </ul>
+        
+        <p><strong>Note:</strong> After clearing, close this tab and restart your ENTROPY app.</p>
+    </div>
+
+    <script>
+        function displayStorageInfo() {
+            const info = document.getElementById('storage-info');
+            const items = [];
+            
+            // Check localStorage
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                items.push(`localStorage: ${key}`);
+            }
+            
+            // Check sessionStorage
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                items.push(`sessionStorage: ${key}`);
+            }
+            
+            info.innerHTML = items.length ? items.join('<br>') : 'No storage items found';
+        }
+        
+        function clearAllStorage() {
+            try {
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Clear IndexedDB
+                if ('indexedDB' in window) {
+                    indexedDB.deleteDatabase('entropy');
+                }
+                
+                // Clear cache if service worker exists
+                if ('caches' in window) {
+                    caches.keys().then(names => {
+                        names.forEach(name => caches.delete(name));
+                    });
+                }
+                
+                document.getElementById('result').innerHTML = 
+                    '<div class="success">✅ All storage cleared! Close this tab and restart ENTROPY.</div>';
+                displayStorageInfo();
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    '<div style="background: #ffebee; padding: 1rem; border-radius: 4px;">❌ Error: ' + error.message + '</div>';
+            }
+        }
+        
+        function clearOnlyEntropy() {
+            try {
+                // Clear only ENTROPY-related keys
+                Object.keys(localStorage).forEach(key => {
+                    if (key.includes('entropy') || key.includes('Entropy')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                
+                Object.keys(sessionStorage).forEach(key => {
+                    if (key.includes('entropy') || key.includes('Entropy')) {
+                        sessionStorage.removeItem(key);
+                    }
+                });
+                
+                document.getElementById('result').innerHTML = 
+                    '<div class="success">✅ ENTROPY storage cleared! Close this tab and restart ENTROPY.</div>';
+                displayStorageInfo();
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    '<div style="background: #ffebee; padding: 1rem; border-radius: 4px;">❌ Error: ' + error.message + '</div>';
+            }
+        }
+        
+        // Display current storage on load
+        displayStorageInfo();
+    </script>
+</body>
+</html>
