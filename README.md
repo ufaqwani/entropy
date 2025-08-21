@@ -5,14 +5,11 @@
 1. **Run the setup script:**
 python3 setup_fixed.py
 
-text
-
 2. **Start the application:**
 
 cd entropy-app
 ./start.sh
 
-text
 
 3. **Access the app:**
 - Frontend: http://localhost:3000
