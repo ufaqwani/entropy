@@ -1,7 +1,6 @@
 // backend/server.js
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 
@@ -36,36 +35,42 @@ try {
 app.use(helmet({ contentSecurityPolicy: false })); // enable CSP later once sources are finalized
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// ===== CORS (preflight-safe, strict to FRONTEND_ORIGIN) =====
+// ===== Manual CORS (exact origin, credentials, preflight-safe) =====
 const allowedOrigins = (process.env.FRONTEND_ORIGIN || '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
 
-// Optional debug to see incoming Origin on Render
-app.use((req, _res, next) => {
-  if (process.env.NODE_ENV === 'production' && req.headers.origin) {
-    console.log('[CORS] Origin:', req.headers.origin);
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  // Debug: see incoming Origin on Render
+  if (process.env.NODE_ENV === 'production' && origin) {
+    console.log('[CORS] Origin:', origin);
   }
+
+  if (origin && allowedOrigins.includes(origin)) {
+    // Reflect exact allowed origin and allow credentials
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin'); // cache safety
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'Content-Type, Authorization, Accept, Origin, X-Requested-With'
+    );
+    res.setHeader(
+      'Access-Control-Allow-Methods',
+      'GET,POST,PUT,PATCH,DELETE,OPTIONS'
+    );
+  }
+
+  // Always answer preflight quickly; do NOT fall through to routes
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+
   next();
 });
-
-app.use(cors({
-  origin: function (origin, cb) {
-    // Allow server-to-server (no Origin) like curl or health checks
-    if (!origin) return cb(null, true);
-    // Allow exact matches from env
-    if (allowedOrigins.includes(origin)) return cb(null, true);
-    // Do NOT throw — respond without CORS so browser blocks it
-    return cb(null, false);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With']
-}));
-
-// Ensure Express answers OPTIONS for all routes with proper headers
-app.options('*', cors());
 
 // Body parsing
 app.use(express.json({ limit: '1mb' })); // raise if you truly need larger payloads
@@ -88,7 +93,6 @@ app.get('/health', (req, res) => {
 // Global error handler (keep last)
 app.use((err, req, res, next) => {
   console.error('[ERR]', (err && err.stack) || err);
-  // If CORS origin was not allowed, cors() may have set no headers; we still return 500 JSON for server-side callers.
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
