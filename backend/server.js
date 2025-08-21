@@ -15,12 +15,12 @@ const categoryRoutes = require('./routes/categories');
 const templateRoutes = require('./routes/templates');
 const analyticsRoutes = require('./routes/analytics');
 const authRoutes = require('./routes/auth');
-// const templateScheduler = require('./services/templateScheduler'); // if this uses node-cron, comment for now; cron won’t run on Render Free reliably
+// const templateScheduler = require('./services/templateScheduler'); // comment on Render Free (sleeping dyno)
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Loud, early boot logs to debug deploys
+// Loud boot logs
 console.log('[BOOT] starting entropy-backend');
 console.log('[BOOT] NODE_ENV =', process.env.NODE_ENV);
 console.log('[BOOT] PORT (from env) =', process.env.PORT);
@@ -32,27 +32,43 @@ try {
   console.log('[BOOT] MONGO uri not set or invalid');
 }
 
-// Middleware
-app.use(helmet({
-  // Keep CSP off until you finalize allowed sources, to avoid blocking assets
-  contentSecurityPolicy: false
-}));
+// Security & logging
+app.use(helmet({ contentSecurityPolicy: false })); // enable CSP later once sources are finalized
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// Strict CORS: allow only configured frontend; allow no-origin for curl/health
-const allowedOrigins = (process.env.FRONTEND_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean);
+// ===== CORS (preflight-safe, strict to FRONTEND_ORIGIN) =====
+const allowedOrigins = (process.env.FRONTEND_ORIGIN || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+// Optional debug to see incoming Origin on Render
+app.use((req, _res, next) => {
+  if (process.env.NODE_ENV === 'production' && req.headers.origin) {
+    console.log('[CORS] Origin:', req.headers.origin);
+  }
+  next();
+});
+
 app.use(cors({
   origin: function (origin, cb) {
-    if (!origin) return cb(null, true); // allow server-to-server and curl
+    // Allow server-to-server (no Origin) like curl or health checks
+    if (!origin) return cb(null, true);
+    // Allow exact matches from env
     if (allowedOrigins.includes(origin)) return cb(null, true);
-    return cb(new Error('Not allowed by CORS'));
+    // Do NOT throw — respond without CORS so browser blocks it
+    return cb(null, false);
   },
   credentials: true,
-  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization']
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With']
 }));
 
-app.use(express.json({ limit: '1mb' })); // raise if you need larger
+// Ensure Express answers OPTIONS for all routes with proper headers
+app.options('*', cors());
+
+// Body parsing
+app.use(express.json({ limit: '1mb' })); // raise if you truly need larger payloads
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
@@ -69,13 +85,14 @@ app.get('/health', (req, res) => {
   res.status(200).json({ ok: true, message: 'Entropy API is running!' });
 });
 
-// Global error handler
+// Global error handler (keep last)
 app.use((err, req, res, next) => {
-  console.error('[ERR]', err && err.stack || err);
+  console.error('[ERR]', (err && err.stack) || err);
+  // If CORS origin was not allowed, cors() may have set no headers; we still return 500 JSON for server-side callers.
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// Connect once, then start server
+// Boot: connect DB then listen
 async function start() {
   try {
     if (!process.env.MONGODB_URI) {
@@ -85,7 +102,7 @@ async function start() {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000, // fail fast if cluster unreachable
       socketTimeoutMS: 10000
-      // Do NOT pass deprecated options like useNewUrlParser/useUnifiedTopology on driver v4+
+      // No deprecated options (useNewUrlParser/useUnifiedTopology) on driver v4+
     });
     console.log('[BOOT] Mongo connected');
 
