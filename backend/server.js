@@ -4,9 +4,7 @@ const mongoose = require('mongoose');
 const helmet = require('helmet');
 const morgan = require('morgan');
 
-// Do NOT rely on dotenv in production on Render; envs are injected by the platform.
-// require('dotenv').config();
-
+// Routes
 const taskRoutes = require('./routes/tasks');
 const progressRoutes = require('./routes/progress');
 const completedTasksRoutes = require('./routes/completedTasks');
@@ -14,12 +12,11 @@ const categoryRoutes = require('./routes/categories');
 const templateRoutes = require('./routes/templates');
 const analyticsRoutes = require('./routes/analytics');
 const authRoutes = require('./routes/auth');
-// const templateScheduler = require('./services/templateScheduler'); // comment on Render Free (sleeping dyno)
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Loud boot logs
+// Boot logs
 console.log('[BOOT] starting entropy-backend');
 console.log('[BOOT] NODE_ENV =', process.env.NODE_ENV);
 console.log('[BOOT] PORT (from env) =', process.env.PORT);
@@ -27,15 +24,15 @@ console.log('[BOOT] PORT (from env) =', process.env.PORT);
 try {
   const u = new URL(process.env.MONGODB_URI || 'mongodb://missing');
   console.log('[BOOT] MONGO host =', u.host, ' dbname =', u.pathname || '(none)');
-} catch (e) {
+} catch {
   console.log('[BOOT] MONGO uri not set or invalid');
 }
 
 // Security & logging
-app.use(helmet({ contentSecurityPolicy: false })); // enable CSP later once sources are finalized
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// ===== Manual CORS (exact origin, credentials, preflight-safe) =====
+// ===== CORS (manual, exact origin, with credentials) =====
 const allowedOrigins = (process.env.FRONTEND_ORIGIN || '')
   .split(',')
   .map(s => s.trim())
@@ -44,15 +41,9 @@ const allowedOrigins = (process.env.FRONTEND_ORIGIN || '')
 app.use((req, res, next) => {
   const origin = req.headers.origin;
 
-  // Debug: see incoming Origin on Render
-  if (process.env.NODE_ENV === 'production' && origin) {
-    console.log('[CORS] Origin:', origin);
-  }
-
   if (origin && allowedOrigins.includes(origin)) {
-    // Reflect exact allowed origin and allow credentials
     res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin'); // cache safety
+    res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader(
       'Access-Control-Allow-Headers',
@@ -64,16 +55,16 @@ app.use((req, res, next) => {
     );
   }
 
-  // Always answer preflight quickly; do NOT fall through to routes
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(204);
+    // FIX: send 204 with headers intact
+    return res.status(204).end();
   }
 
   next();
 });
 
 // Body parsing
-app.use(express.json({ limit: '1mb' })); // raise if you truly need larger payloads
+app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
@@ -85,18 +76,18 @@ app.use('/api/templates', templateRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/auth', authRoutes);
 
-// Health check (public)
+// Health check
 app.get('/health', (req, res) => {
   res.status(200).json({ ok: true, message: 'Entropy API is running!' });
 });
 
-// Global error handler (keep last)
+// Error handler
 app.use((err, req, res, next) => {
   console.error('[ERR]', (err && err.stack) || err);
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// Boot: connect DB then listen
+// Boot DB + server
 async function start() {
   try {
     if (!process.env.MONGODB_URI) {
@@ -104,13 +95,11 @@ async function start() {
     }
     await mongoose.connect(process.env.MONGODB_URI, {
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000, // fail fast if cluster unreachable
-      socketTimeoutMS: 10000
-      // No deprecated options (useNewUrlParser/useUnifiedTopology) on driver v4+
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 10000,
     });
     console.log('[BOOT] Mongo connected');
 
-    console.log('[BOOT] starting HTTP server on', PORT);
     app.listen(PORT, () => {
       console.log('[BOOT] HTTP server listening on', PORT);
     });
@@ -120,8 +109,14 @@ async function start() {
   }
 }
 
-process.on('unhandledRejection', (r) => { console.error('[FATAL] unhandledRejection', r); process.exit(1); });
-process.on('uncaughtException', (e) => { console.error('[FATAL] uncaughtException', e); process.exit(1); });
+process.on('unhandledRejection', (r) => {
+  console.error('[FATAL] unhandledRejection', r);
+  process.exit(1);
+});
+process.on('uncaughtException', (e) => {
+  console.error('[FATAL] uncaughtException', e);
+  process.exit(1);
+});
 
 start();
 
