@@ -32,17 +32,41 @@ try {
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// ===== CORS (manual, exact origin, with credentials) =====
-const allowedOrigins = (process.env.FRONTEND_ORIGIN || '')
+// ===== Manual CORS (normalized origin, credentials, preflight-safe) =====
+function normOrigin(input) {
+  if (!input) return '';
+  try {
+    const u = new URL(input);
+    // normalize to "protocol://host" (no trailing slash, no path)
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    // fallback: just strip trailing slashes
+    return String(input).replace(/\/+$/, '');
+  }
+}
+
+const allowedOriginsRaw = (process.env.FRONTEND_ORIGIN || '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
 
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
+const allowedOrigins = allowedOriginsRaw.map(normOrigin);
 
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
+// Boot log for diagnostics
+console.log('[CORS] Allowed origins (normalized):', allowedOrigins);
+
+app.use((req, res, next) => {
+  const reqOrigin = req.headers.origin || '';
+  const normReqOrigin = normOrigin(reqOrigin);
+
+  // Debug incoming origin
+  if (reqOrigin) {
+    console.log('[CORS] Incoming Origin:', reqOrigin, '-> normalized:', normReqOrigin);
+  }
+
+  if (reqOrigin && allowedOrigins.includes(normReqOrigin)) {
+    // Reflect exact original origin and allow credentials
+    res.setHeader('Access-Control-Allow-Origin', reqOrigin);
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader(
@@ -56,12 +80,13 @@ app.use((req, res, next) => {
   }
 
   if (req.method === 'OPTIONS') {
-    // FIX: send 204 with headers intact
+    // Send 204 with headers intact
     return res.status(204).end();
   }
 
   next();
 });
+
 
 // Body parsing
 app.use(express.json({ limit: '1mb' }));
