@@ -17,6 +17,8 @@ import AnalyticsDashboard from './components/AnalyticsDashboard';
 import AuthContext from './contexts/AuthContext';
 import './styles/App.css';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
 function AppContent() {
     const { logout } = useContext(AuthContext);
     const [todayTasks, setTodayTasks] = useState([]);
