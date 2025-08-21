@@ -1,4 +1,5 @@
 // backend/server.js
+const cookieParser = require('cookie-parser');
 const express = require('express');
 const mongoose = require('mongoose');
 const helmet = require('helmet');
@@ -88,7 +89,9 @@ app.use((req, res, next) => {
 });
 
 
+
 // Body parsing
+app.use(cookieParser());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
