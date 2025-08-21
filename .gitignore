@@ -1,0 +1,19 @@
+# dependencies
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# build outputs
+frontend/build/
+backend/build/
+dist/
+
+# caches
+**/.cache/
+frontend/.cache/
+
+# env & misc
+.env
+.env.*
+npm-debug.log*
+.DS_Store
