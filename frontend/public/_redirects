@@ -1,1 +1,7 @@
-/*    /index.html   200
+# Proxy all API calls to Render (force, preserve method/body)
+# The trailing ":splat" passes through the rest of the path.
+# The "200!" forces a rewrite, not a redirect, for all methods including POST.
+ /api/*   https://entropy-backend.onrender.com/api/:splat   200!
+
+# SPA fallback: serve index.html for client-side routes
+/*        /index.html                                       200
