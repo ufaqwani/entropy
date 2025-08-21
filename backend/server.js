@@ -15,6 +15,8 @@ const analyticsRoutes = require('./routes/analytics');
 const authRoutes = require('./routes/auth');
 
 const app = express();
+// Make Express trust Render/Cloudflare proxy so secure cookies work
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 
 // Boot logs
