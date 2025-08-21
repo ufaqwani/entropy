@@ -1,4 +1,5 @@
-const BASE = process.env.REACT_APP_API_BASE_URL;
+const BASE = process.env.REACT_APP_API_BASE_URL || ''; // '' means same-origin (Netlify)
+
 
 if (!BASE) {
   // Warn during local builds if the var is missing
