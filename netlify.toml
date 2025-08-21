@@ -1,14 +1,14 @@
 # netlify.toml
 
 [build]
-  base = "frontend"
-  command = "npm run build"
-  publish = "frontend/build"
+  base = "frontend"         # run from /frontend
+  command = "npm run build" # CRA build
+  publish = "build"         # <-- IMPORTANT: not frontend/build
 
 [build.environment]
-  CI = "false"  # prevent CRA from failing build on ESLint warnings
+  CI = "false"              # let CRA ignore ESLint warnings
 
-# Proxy API requests to Render so cookies are first-party
+# Proxy API to Render so cookies are first-party
 [[redirects]]
   from = "/api/*"
   to = "https://entropy-backend.onrender.com/api/:splat"
