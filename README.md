@@ -50,3 +50,18 @@ text
 - Mobile responsive design
 
 Fight entropy. Win the day! ⚡
+
+## Screenshots
+- Analytics:
+<img width="1920" height="1080" alt="Screenshot from 2025-09-04 16-41-39" src="https://github.com/user-attachments/assets/c50b3e0b-d86c-4bee-a5bd-0caa9b81fe60" />
+- Daily Autdit:
+<img width="1920" height="1080" alt="Screenshot from 2025-09-04 16-41-52" src="https://github.com/user-attachments/assets/c98f96d2-ca63-442b-9cb7-5f7f9d87a08b" />
+- Add Categories:
+<img width="1920" height="1080" alt="Screenshot from 2025-09-04 16-42-17" src="https://github.com/user-attachments/assets/96f6b8f6-4476-42f5-bca2-c9546455b49c" />
+- Add New Task:
+<img width="1920" height="1080" alt="Screenshot from 2025-09-04 16-42-34" src="https://github.com/user-attachments/assets/37849a1f-986a-44dd-b485-32f88b55e2a4" />
+
+
+
+
+
