@@ -1,6 +1,5 @@
 # ENTROPY - Task Management Application
-
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/ae1170ec-de93-4b17-a33e-44cb4b23a0bf" />
+<img width="1920" height="1080" alt="Screenshot from 2025-09-04 16-41-25" src="https://github.com/user-attachments/assets/9a0d1e8d-5206-4a74-be81-433c11cfc125" />
 
 
 ## 🚀 Quick Start (Linux)
